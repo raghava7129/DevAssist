@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from . import config
-from .tools import TOOLS
+from .tools import TOOLS, Tool_Schema
 
 
 load_dotenv()
@@ -15,10 +15,10 @@ groq_client = Groq()
 
 def call_llm(msg, tools=None):
     response = groq_client.chat.completions.create(
-        messages=[{"role": "user", "content": msg}],
+        messages=msg,
         model = os.getenv("model", 'openai/gpt-oss-120b'),
         temperature=0.5,
-        tools=tools
+        tools=tools or Tool_Schema
     )
     message = response.choices[0].message
 
