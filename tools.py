@@ -1,4 +1,7 @@
+import subprocess
+
 from .skills import read_skill
+from . import sandbox
 
 TODOS = []
 TASK_STATUS_MAPPING = {
@@ -38,6 +41,17 @@ def write_todos(todos):
 
     TODOS[:] = todos
     return todos_prompt() or "Todo list cleared."
+
+def bash(command):
+    """Run a shell command and return its combined stdout and stderr."""
+    try:
+        result = sandbox.run(command)
+    except subprocess.TimeoutExpired as expired:
+        return (
+            f"Timed out after {expired.timeout}s and was killed. "
+            "Narrow it down - search inside the working directory rather than /."
+        )
+    return (result.stdout + result.stderr) or "(no input)"
 
 Tool_Schema = [
     {
@@ -122,6 +136,23 @@ Tool_Schema = [
                 "required": ["todos"],
             },
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "bash",
+            "description": bash.__doc__,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "The shell command to run",
+                    }
+                },
+                "required": ["command"]
+            }
+        },
     }
 ]
 
@@ -130,5 +161,15 @@ TOOLS = {
     "read_file": read_file,
     "write_file": write_file,
     "read_skill": read_skill,
-    "write_todos": write_todos
+    "write_todos": write_todos,
+    "bash": bash
 }
+
+
+if __name__ == "__main__":
+    from pathlib import Path
+    # print(read_file("DevAssist/tools.py"))
+    print('*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***')
+    print(bash("ls"))
+    print('*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***')
+    print(Path.cwd().resolve())
