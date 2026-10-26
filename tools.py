@@ -2,6 +2,7 @@ import subprocess
 
 from .skills import read_skill
 from . import sandbox
+from .subagent import subagent
 
 TODOS = []
 TASK_STATUS_MAPPING = {
@@ -153,6 +154,27 @@ Tool_Schema = [
                 "required": ["command"]
             }
         },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "subagent",
+            "description": subagent.__doc__,
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "description": {
+                        "type": "string",
+                        "description": (
+                            "The question, written to stand alone: what to find "
+                            "out, where to start looking, and what the answer "
+                            "should contain."
+                        ),
+                    }
+                },
+                "required": ["description"],
+            },
+        },
     }
 ]
 
@@ -162,7 +184,8 @@ TOOLS = {
     "write_file": write_file,
     "read_skill": read_skill,
     "write_todos": write_todos,
-    "bash": bash
+    "bash": bash,
+    "subagent": subagent,
 }
 
 
