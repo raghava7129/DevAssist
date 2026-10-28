@@ -1,8 +1,10 @@
+import json
 import subprocess
 
 from .skills import read_skill
 from . import sandbox
 from .subagent import subagent
+from .permissions import check_permissions
 
 TODOS = []
 TASK_STATUS_MAPPING = {
@@ -53,6 +55,38 @@ def bash(command):
             "Narrow it down - search inside the working directory rather than /."
         )
     return (result.stdout + result.stderr) or "(no input)"
+
+
+def execute_tool_call(tool_call):
+    """
+    Run tool calls through the permission layer.
+    shared by both main loop and subagents. 
+    """
+    from .display import display
+    name = tool_call.function.name
+
+    try:
+        args = json.loads(tool_call.function.arguments)
+    except json.JSONDecodeError as e:
+        return {}, f"Error: tool call args are not valid JSON ({e})."
+
+    if name not in TOOLS:
+        return args, f"Error: no tool named '{name}'. Available: {', '.join(TOOLS)}."
+
+    try:
+        action, reason = check_permissions(name, args)
+        if action == 'deny':
+            return args, f"Blocked by policy: {reason}"
+        if action == "ask" and not display.approve(reason):
+            return args, "The user denied this tool call."
+        return args, TOOLS[name](**args)
+    except TypeError as e:
+        return args, f"Error: wrong arguments for {name} ({e})."
+    except KeyError as e:
+        return args, f"Error: {name} needs an argument you did not send: {e}."
+    except Exception as e:
+        return args, f"Error: {name} failed - {type(e).__name__}: {e}"
+
 
 Tool_Schema = [
     {

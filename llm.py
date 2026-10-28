@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from . import config
-from .tools import TOOLS, Tool_Schema
+from .tools import TOOLS, Tool_Schema, execute_tool_call
 
 
 load_dotenv()
@@ -48,7 +48,8 @@ if __name__ == "__main__":
     if message.tool_calls:
         tool_call = message.tool_calls[0]
         args = json.loads(tool_call.function.arguments)
-        result = TOOLS[tool_call.function.name](**args)
+        # result = TOOLS[tool_call.function.name](**args)
+        _, result = execute_tool_call(tool_call)
         print("Tool: ", tool_call.function.name, args)
         print(result, "\n")
 
