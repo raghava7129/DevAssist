@@ -7,6 +7,7 @@ from prompt_toolkit.styles import Style
 
 from rich.console import Console
 from rich.padding import Padding
+from rich.panel import Panel
 from rich.text import Text
 
 
@@ -15,6 +16,8 @@ HISTORY = Path.home() / ".agents" / "history"
 STYLE = Style.from_dict({"prompt": "bold #f34b25"})
 
 TOOL = "#5ade8a"
+MUTED = "#565f89"
+ACCENT = "#7aa2f7"
 
 
 class Display():
@@ -43,5 +46,19 @@ class Display():
             return False
         return answer.lower().startswith("y")
 
+
+    def show_context(self, context):
+        self.console.print(
+            Padding(
+                Panel(
+                    Text(context.strip(), style=MUTED),
+                    title=Text("subagent's context", style=f"bold {ACCENT}"),
+                    title_align="left",
+                    border_style=ACCENT,
+                    padding=(0, 1),
+                ),
+                (1, 2, 0, 4),
+            )
+        )
 
 display = Display()

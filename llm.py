@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from . import config
-from .tools import TOOLS, Tool_Schema, execute_tool_call
+from .tools import Tool_Schema, execute_tool_call
 
 
 load_dotenv()
@@ -36,6 +36,7 @@ def call_llm(msg, tools=None):
 
 
 if __name__ == "__main__":
+    # from .tools import TOOLS
     user_input = input("What's on your mind?> ")
 
     message, usage = call_llm([
