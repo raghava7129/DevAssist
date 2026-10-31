@@ -31,6 +31,8 @@ grep rather than asking for it again. That file only exists for the current
 turn, so read it now or re-run the command later.
 
 Your current working directory is: {os.getcwd()}
+File paths passed to tools may be relative to this project root or include the
+package directory (for example, "llm.py" or "DevAssist/llm.py").
 
 You have skills available. Each one is a set of instructions for a task.
 If a skill matches what the user wants, call read_skill first and follow it.

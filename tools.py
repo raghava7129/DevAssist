@@ -1,10 +1,18 @@
 import json
+import os
 import subprocess
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from .skills import read_skill
 from . import sandbox
 from .subagent import subagent
 from .permissions import check_permissions
+
+ROOT_PATH = Path(os.getenv("ROOT_PATH", Path.cwd())).expanduser().resolve()
+PACKAGE_NAME = Path(__file__).resolve().parent.name
 
 TODOS = []
 TASK_STATUS_MAPPING = {
@@ -13,19 +21,45 @@ TASK_STATUS_MAPPING = {
     "done": "[x]"
 }
 
+
+def _resolve_path(path: str) -> Path:
+    try:
+        expanded = Path(path).expanduser()
+    except RuntimeError:
+        expanded = Path(path)
+    if expanded.is_absolute() and expanded.exists():
+        return expanded.resolve()
+
+    rel = Path(path.lstrip("~/"))
+    n = len(PACKAGE_NAME.parts)
+
+    if rel.parts[:n] == PACKAGE_NAME.parts:
+        candidates = [ROOT_PATH / rel, ROOT_PATH / PACKAGE_NAME / rel]
+    else: 
+        candidates = [ROOT_PATH / PACKAGE_NAME / rel, ROOT_PATH / rel]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.resolve()
+
+    return candidates[0].resolve()
+
+
 def read_file(path: str) -> str:
     """Read a file and return its contents."""
+    resolved_path = _resolve_path(path)
     try:
-        with open(path, "r") as f:
+        with resolved_path.open("r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return f"Error: File '{path}' not found."
+        return f"Error: File '{path}' not found under '{ROOT_PATH}'."
 
 def write_file(path: str, content: str) -> None:
     """Create a file, or overwrite it if it already exists."""
-    with open(path, "w") as f:
+    resolved_path = _resolve_path(path)
+    with resolved_path.open("w", encoding="utf-8") as f:
         f.write(content)
-    return f'Wrote to {path}'
+    return f"Wrote to {resolved_path}"
 
 def todos_prompt():
     return "\n".join(
