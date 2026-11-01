@@ -12,7 +12,7 @@ from .subagent import subagent
 from .permissions import check_permissions
 
 ROOT_PATH = Path(os.getenv("ROOT_PATH", Path.cwd())).expanduser().resolve()
-PACKAGE_NAME = Path(__file__).resolve().parent.name
+PACKAGE_NAME = Path(Path(__file__).parent.resolve().name)
 
 TODOS = []
 TASK_STATUS_MAPPING = {
