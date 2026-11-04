@@ -39,3 +39,6 @@ If a skill matches what the user wants, call read_skill first and follow it.
 
 {skills_prompt()}
 """
+
+CONTEXT_WINDOW = 128000
+COMPACT_AT = 0.85

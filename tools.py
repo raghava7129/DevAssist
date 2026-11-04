@@ -10,6 +10,7 @@ from .skills import read_skill
 from . import sandbox
 from .subagent import subagent
 from .permissions import check_permissions
+from . import compress
 
 ROOT_PATH = Path(os.getenv("ROOT_PATH", Path.cwd())).expanduser().resolve()
 PACKAGE_NAME = Path(Path(__file__).parent.resolve().name)
@@ -50,7 +51,7 @@ def read_file(path: str) -> str:
     resolved_path = _resolve_path(path)
     try:
         with resolved_path.open("r", encoding="utf-8") as f:
-            return f.read()
+            return compress.store_in_tempfile(f.read())
     except FileNotFoundError:
         return f"Error: File '{path}' not found under '{ROOT_PATH}'."
 
@@ -88,7 +89,7 @@ def bash(command):
             f"Timed out after {expired.timeout}s and was killed. "
             "Narrow it down - search inside the working directory rather than /."
         )
-    return (result.stdout + result.stderr) or "(no input)"
+    return compress.store_in_tempfile((result.stdout + result.stderr) or "(no input)")
 
 
 def execute_tool_call(tool_call):
