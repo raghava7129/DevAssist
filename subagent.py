@@ -28,6 +28,14 @@ the question, no long code blocks - cite the path and line and let the lead
 agent open it. Say plainly what you could not find.
 """
 
+RESTRICTED_TOOLS = ['write_file', 'write_todos', 'subagent']
+
+
+def toolset():
+    from .tools import Tool_Schema
+    return [s for s in Tool_Schema if s['function']['name'] not in RESTRICTED_TOOLS]
+
+
 def subagent(description: str) -> str:
     """
     Hand a self-contained exploration question to a fresh agent that
@@ -38,11 +46,14 @@ def subagent(description: str) -> str:
     see this conversation, so include every detail it needs. It reads
     and reports; it never edits.
     """
+    from .llm import call_llm
     from .display import display
+    from .compress import remove_tool_output
+    from .tools import execute_tool_call
 
     display.show_context(description)
 
-    message = [
+    messages = [
         {"role": "system", "content": SUBAGENT_SYSTEM_PROMPT},
         {"role": "user", "content": description},
     ]
@@ -50,4 +61,41 @@ def subagent(description: str) -> str:
     report = None
 
     for _ in range(MAX_TURNS):
-        pass
+        remove_tool_output(messages)
+
+        with display.loading('subagent working...'):
+            message, usage = call_llm(messages, tools=toolset())
+
+        messages.append(message.model_dump(exclude_none=True))
+        display.usage(usage)
+        report = message.content or report
+
+        if not message.tool_calls:
+            return report or "(subagent didn't find anything.)"
+
+        for tool_call in message.tool_calls:
+            args, result = execute_tool_call(tool_call)
+            display.view_tool_activity(
+                tool_call.function.name, args, result, nested=True
+            )
+            messages.append({
+                "role": 'tool',
+                "tool_call_id": tool_call.id,
+                "content": result
+            })
+
+    if report:
+        return  (
+            f'(SUBAGENT HAS DONE {MAX_TURNS} TURNS, BEFORE FINISHING.'
+            f'PARTIAL FINDINGS ARE AS BELOW - NARROW THE QUESTION AND ASK AGAIN IF NEEDED.)'
+            f'\n\n{report}'
+        )
+    return  {
+        f'SUBAGENT HAS DONE {MAX_TURNS} TURNS AND FOUND NOTHING.'
+    }
+
+
+if __name__ == '__main__':
+    subagent(
+        'can you read and print the llm.py file?'
+    )
