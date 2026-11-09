@@ -65,7 +65,7 @@ def strip(messages):
         if msg['role'] != 'tool' or TRIMMED in content or len(content) <= STUB:
             continue
 
-        messages['content'] = (
+        msg['content'] = (
             content[:STUB] + f"\n\n{TRIMMED} {len(content) - STUB} chars cut. "
             "Run the command again to see the full output.]"
         )
@@ -91,3 +91,13 @@ def remove_tool_output(messages):
             message["content"] = f"{TRIMMED} dropped to fit the context window.]"
             dropped += 1
     return dropped
+
+
+if __name__ == "__main__":
+    msgs = [
+        {"role": "user", "content": "read llm.py"},
+        {"role": "tool", "tool_call_id": "call_1", "content": "x" * 8000},
+    ]
+    print('Before: ', len(msgs[1]['content']))
+    strip(msgs)
+    print('After: ', len(msgs[1]['content']))

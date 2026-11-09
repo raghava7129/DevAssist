@@ -14,6 +14,7 @@ from rich.padding import Padding
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.text import Text
+from rich.markdown import Markdown
 
 
 HISTORY = Path.home() / ".agents" / "history"
@@ -23,6 +24,7 @@ STYLE = Style.from_dict({"prompt": "bold #f34b25"})
 TOOL = "#5ade8a"
 MUTED = "#565f89"
 ACCENT = "#7aa2f7"
+USER = "#9ece6a"
 
 MAX_TOOL_OUTPUT_LINES = 12
 
@@ -86,9 +88,28 @@ class Display():
         )
         self.console.print(Padding(Text(parts, style=MUTED), (1, 0, 0, 2)))
 
+    def user(self, text):
+        self.console.print(
+            Padding(
+                Text(text.strip(), style=f"bold {USER}"),
+                (1, 0, 0, 2)
+            )
+        )
+
+    def agent(self, text):
+        self.console.print(
+            Padding(
+                Group(
+                    Text("agent", style=f"bold {ACCENT}"),
+                    Padding(Markdown(text.strip()), (1, 0, 0, 0)),
+                ),
+                (1, 2, 0, 2),
+            )
+        )
+
     def view_tool_activity(self, name, args, result, nested=False):
         header = Text.assemble(
-            (f'{name}', f'bold {TOOL}'),
+            (f'{name}   ', f'bold {TOOL}'),
             (self._format_args(args), MUTED)
         )
         self.console.print(
@@ -118,5 +139,96 @@ class Display():
             body.append(f"\n… {hidden} more lines", style=f"italic {TOOL}")
         return body
 
+    def banner(self, sandbox_name='None'):
+        self.console.print()
+        self.console.print(
+            Rule(Text(" coding agent ", style=f"bold {ACCENT}"), style=MUTED)
+        )
+        self.console.print(
+            Padding(
+                Text(
+                    f"sandbox: {sandbox_name}  ·  enter for a newline  ·  ctrl-d to exit",
+                    style=MUTED
+                ),
+                (0, 0, 0, 2)
+            )
+        )
+
+    def resumed(self, messages, label="resumed"):
+        turns = sum(1 for m in messages if m["role"] == "user")
+        self.console.print(
+            Padding(
+                Text(
+                    f"{label} · {len(messages)} messages · {turns} turns",
+                    style=MUTED
+                ),
+                (0, 0, 0, 2),
+            )
+        )
+
+    def replay(self, messages):
+        results = {
+            m["tool_call_id"]: m["content"] for m in messages if m["role"] == "tool"
+        }
+        for message in messages:
+            if message["role"] == "user":
+                self.user(message["content"])
+            elif message["role"] == "assistant":
+                if message.get("content"):
+                    self.agent(message["content"])
+                for call in message.get("tool_calls") or []:
+                    self.view_tool_activity(
+                        call["function"]["name"],
+                        json.loads(call["function"]["arguments"]),
+                        results.get(call["id"], ""),
+                    )
+
 
 display = Display()
+
+
+if __name__ == "__main__":
+    from .config import SYSTEM_PROMPT
+
+    llm_file_path = Path(__file__).parent / "llm.py"
+    content = llm_file_path.read_text().splitlines()
+
+    messages = [
+        {
+            'role': 'system',
+            'content': SYSTEM_PROMPT
+        },
+        {
+            'role': 'user',
+            'content': 'hey can you print the contents of the /llm.py file ?'
+        },
+        {
+            'role': 'assistant',
+            'reasoning': 'We need to read /lll... Actually path is /home/raghs/llm.py? The user says "/llm.py". Probably file at project root named llm.py. Let\'s read.',
+            'tool_calls': [
+                {
+                    'id': 'fc_63b8ce8c-17d2-4b4d-9035-7713191dd7f7',
+                    'function': {'arguments': '{"path":"llm.py"}', 'name': 'read_file'}, 'type': 'function'
+                }
+            ]
+        },
+        {
+            'role': 'assistant',
+            'content': "```python\n" + "\n".join(content) + "\n```",
+            'reasoning': 'We need to output the contents.'
+        },
+        {
+            'role': 'user',
+            'content': 'what is the purpose of this file ?'
+        },
+        {
+            'role': 'assistant',
+            'content': "Some random code.",
+            'reasoning': 'The purpose of the file is to facilitate interaction with a language model and manage tool calls.'
+        }
+    ]
+
+    display.banner('linux')
+    display.resumed(messages, label="demo")
+
+    display.replay(messages)
