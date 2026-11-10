@@ -73,6 +73,13 @@ def all_sessions():
     ]
 
 
+def rewind_to(count):
+    global WRITTEN
+    with get_session_path(CURRENT).open("a") as f:
+        f.write(json.dumps({"rewind_to": count}) + "\n")
+    WRITTEN = count
+
+
 if __name__ == '__main__':
     msgs = [
         {'role': 'user', 'content': 'hey how is it going?'},
